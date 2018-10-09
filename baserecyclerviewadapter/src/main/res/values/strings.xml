@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BaseRecyclerViewAdapter</string>
+
+    <string name="tap_to_reload">Tap to reload</string>
+</resources>

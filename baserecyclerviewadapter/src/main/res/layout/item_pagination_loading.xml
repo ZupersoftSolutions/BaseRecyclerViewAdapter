@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/layout_loading"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/loadmore_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </android.support.constraint.ConstraintLayout>
+
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/layout_error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:padding="@dimen/margin_padding_size_small"
+        android:visibility="gone"
+        tools:ignore="KeyboardInaccessibleWidget">
+
+        <ImageButton
+            android:id="@+id/button_retry"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:background="@drawable/retry_selector"
+            android:clickable="false"
+            android:src="@drawable/ic_refresh_black_24dp"
+            android:tint="#AAADC4"
+            android:tintMode="src_in"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toLeftOf="@id/layout_error_content"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription"
+            tools:targetApi="lollipop" />
+
+        <LinearLayout
+            android:id="@+id/layout_error_content"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/margin_padding_size_medium"
+            android:layout_marginEnd="@dimen/margin_padding_size_large"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toRightOf="@id/button_retry"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/text_error_msg"
+                style="@style/Base.TextAppearance.AppCompat.Body1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="What went wrong" />
+
+            <TextView
+                style="@style/Base.TextAppearance.AppCompat.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tap_to_reload" />
+        </LinearLayout>
+    </android.support.constraint.ConstraintLayout>
+</FrameLayout>
