@@ -2,14 +2,14 @@ package com.zuper.baserecyclerviewadapter.model;
 
 public class Joke {
 
-    private String setup;
-    private String punchline;
+    private String id;
+    private String joke;
 
     public String getPunchline() {
-        return punchline;
+        return joke;
     }
 
     public String getSetup() {
-        return setup;
+        return joke;
     }
 }

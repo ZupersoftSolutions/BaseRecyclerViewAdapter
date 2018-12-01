@@ -12,6 +12,9 @@ import com.google.gson.reflect.TypeToken;
 import com.zuper.baserecyclerviewadapter.baserecyclerviewadapter.R;
 import com.zuper.baserecyclerviewadapter.model.Joke;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,9 +25,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
-import co.zuper.util.baserecyclerviewadapter.PaginationConstants;
-import co.zuper.util.baserecyclerviewadapter.PaginationListener;
-import co.zuper.util.baserecyclerviewadapter.PaginationLoadMoreCallback;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationListener;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationLoadMoreCallback;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         gson = new Gson();
         listType = new TypeToken<List<Joke>>() {
         }.getType();
-        getJokes();
+        getJokes(1);
     }
 
     private void getViewIds() {
@@ -55,16 +58,12 @@ public class MainActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new JokesAdapter();
         adapter.setPaginationEnabled(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL,
+                false));
         adapter.setPaginationListener(new PaginationListener() {
             @Override
             public int getTotalPages() {
                 return 5;
-            }
-
-            @Override
-            public int getTotalRecords() {
-                return 50;
             }
 
             @Override
@@ -82,21 +81,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void loadMore(int pageNo) {
                 Log.d("page_no", String.valueOf(pageNo));
-                getJokes();
+                getJokes(pageNo);
             }
         });
         recyclerView.setAdapter(adapter);
     }
 
-    private void getJokes() {
+    private void getJokes(int pageNo) {
         HttpPostAsyncTask httpPostAsyncTask;
         httpPostAsyncTask = new HttpPostAsyncTask(new Callback() {
             @Override
             public void onSuccess(String response) {
                 Log.d(TAG, "On success called");
-                List<Joke> jokes = gson.fromJson(response, listType);
-                adapter.onLoadMoreCompleted();
-                adapter.addAll(jokes, false);
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    List<Joke> jokes = gson.fromJson(jsonObject.getString("results"), listType);
+                    adapter.onLoadMoreCompleted();
+                    adapter.addAll(jokes, false);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -105,7 +109,8 @@ public class MainActivity extends AppCompatActivity {
                 adapter.onLoadMoreFailed(PaginationConstants.LOAD_MORE_STATUS_ERROR);
             }
         });
-        httpPostAsyncTask.execute("https://08ad1pao69.execute-api.us-east-1.amazonaws.com/dev/random_ten");
+        String url = "https://icanhazdadjoke.com/search?page=" + pageNo + "&limit=10";
+        httpPostAsyncTask.execute(url);
     }
 
     public static class HttpPostAsyncTask extends AsyncTask<String, Void, Void> {
@@ -127,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Create the urlConnection
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestProperty("Accept", "application/json");
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 urlConnection.setRequestMethod("GET");
 

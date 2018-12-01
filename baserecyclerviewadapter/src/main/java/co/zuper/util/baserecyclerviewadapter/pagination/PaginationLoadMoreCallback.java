@@ -1,4 +1,4 @@
-package co.zuper.util.baserecyclerviewadapter;
+package co.zuper.util.baserecyclerviewadapter.pagination;
 
 public interface PaginationLoadMoreCallback {
 

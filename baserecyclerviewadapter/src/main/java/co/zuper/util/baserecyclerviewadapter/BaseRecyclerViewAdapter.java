@@ -10,26 +10,47 @@ import android.view.ViewGroup;
 import java.util.ArrayList;
 import java.util.List;
 
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.LOAD_MORE_STATUS_ERROR;
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.LOAD_MORE_STATUS_LOADING;
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.LOAD_MORE_STATUS_OFFLINE_ERROR;
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.LOAD_MORE_STATUS_SUCCESS;
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.PAGINATION_LOADING_TYPE;
-import static co.zuper.util.baserecyclerviewadapter.PaginationConstants.PAGINATION_USER_DEFINED_TYPE;
+import co.zuper.util.baserecyclerviewadapter.listener.OnItemClickListener;
+import co.zuper.util.baserecyclerviewadapter.listener.OnItemLongClickListener;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationListener;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationLoadMoreCallback;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationLoadingViewHolder;
+import co.zuper.util.baserecyclerviewadapter.pagination.PaginationRetryCallback;
 
-public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements PaginationRetryCallback {
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .DEFAULT_FIRST_PAGE_NO;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .LOAD_MORE_STATUS_ERROR;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .LOAD_MORE_STATUS_LOADING;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .LOAD_MORE_STATUS_OFFLINE_ERROR;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .LOAD_MORE_STATUS_SUCCESS;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .PAGINATION_LOADING_TYPE;
+import static co.zuper.util.baserecyclerviewadapter.pagination.PaginationConstants
+        .PAGINATION_USER_DEFINED_TYPE;
+
+public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<RecyclerView
+        .ViewHolder> implements PaginationRetryCallback {
 
     private final String TAG = this.getClass().getSimpleName();
 
     private List<D> data;
+    private int firstPageNo = DEFAULT_FIRST_PAGE_NO;
+    private int currentPageNo = firstPageNo;
     private boolean isPaginationEnabled = false;
-    private int currentPageNo = 0;
     private boolean isLoadingViewAdded = false;
+    private boolean shouldShowLoadingView = true;
+    private boolean shouldShowErrorView = true;
     private int loadMoreStatus = LOAD_MORE_STATUS_SUCCESS;
+    private int paginationLoadingLayoutId = R.layout.item_pagination_loading;
 
     private PaginationListener paginationListener;
     private PaginationLoadMoreCallback loadMoreCallback;
     private OnItemClickListener onItemClickListener;
+    private OnItemLongClickListener onItemLongClickListener;
 
     private Handler handler;
 
@@ -46,7 +67,8 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
                 return createItemViewHolder(parent);
 
             case PAGINATION_LOADING_TYPE:
-                return new PaginationLoadingViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_pagination_loading, parent, false), this);
+                return new PaginationLoadingViewHolder(LayoutInflater.from(parent.getContext())
+                        .inflate(paginationLoadingLayoutId, parent, false), this);
         }
     }
 
@@ -57,6 +79,9 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
             default:
                 if (onItemClickListener != null) {
                     ((BaseViewHolder) holder).setOnItemClickListener(onItemClickListener);
+                }
+                if (onItemLongClickListener != null) {
+                    ((BaseViewHolder) holder).setOnItemLongClickListener(onItemLongClickListener);
                 }
                 bindHolder(holder, position);
                 if (isPaginationEnabled) {
@@ -85,17 +110,22 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
 
     @Override
     public int getItemViewType(int position) {
-        return (position == getItemCount() - 1 && isLoadingViewAdded) ? PAGINATION_LOADING_TYPE : PAGINATION_USER_DEFINED_TYPE;
+        return (position == getItemCount() - 1 && isLoadingViewAdded) ? PAGINATION_LOADING_TYPE :
+                PAGINATION_USER_DEFINED_TYPE;
     }
 
     @Override
     public int getItemCount() {
-        return data.size();
+        return hasLoadingViewAdded() ? data.size() + 1: data.size();
     }
 
     @Override
     public void onRetryClicked() {
-        loadMoreCallback.loadMore(currentPageNo + 1);
+        loadMoreCallback.loadMore(currentPageNo);
+    }
+
+    private boolean hasLoadingViewAdded(){
+        return loadMoreStatus != LOAD_MORE_STATUS_SUCCESS;
     }
 
     private int getPageNoForPosition(int position) {
@@ -111,20 +141,29 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
             return;
         }
 
-        if (currentPageNo == paginationListener.getTotalPages()) {
+        if (currentPageNo > paginationListener.getTotalPages()) {
             return;
         }
 
-        if (paginationListener.getPreLoadNumber() <= getItemCount() && (getItemCount() - position == paginationListener.getPreLoadNumber())) {
-            loadMoreCallback.loadMore(currentPageNo + 1);
-            showLoadingView();
+        if (paginationListener.getPreLoadNumber() <= getItemCount() && (getItemCount() - position
+                == paginationListener.getPreLoadNumber())) {
+            loadMoreCallback.loadMore(currentPageNo);
+            if(shouldShowLoadingView) {
+                showLoadingView();
+            }
         }
     }
 
     private void addEmptyData() {
-        Log.d(TAG, "AddEmptyData called");
-        data.add(null);
-        Log.d(TAG, "DATA SIZE after adding null - " + data.size());
+//        Log.d(TAG, "AddEmptyData called");
+//        data.add(null);
+//        Log.d(TAG, "DATA SIZE after adding null - " + data.size());
+//        handler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                notifyItemInserted(data.size());
+//            }
+//        });
         handler.post(new Runnable() {
             @Override
             public void run() {
@@ -134,18 +173,24 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
     }
 
     private void removeEmptyData() {
-        Log.d(TAG, "RemoveEmptyData called");
-        Log.d(TAG, "DATA SIZE before remove - " + data.size());
-        if (data.size() > 0) {
-            data.remove(data.size() - 1);
-            Log.d(TAG, "DATA SIZE after removed - " + data.size());
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    notifyItemInserted(data.size());
-                }
-            });
-        }
+//        Log.d(TAG, "RemoveEmptyData called");
+//        Log.d(TAG, "DATA SIZE before remove - " + data.size());
+//        if (data.size() > 0) {
+//            data.remove(data.size() - 1);
+//            Log.d(TAG, "DATA SIZE after removed - " + data.size());
+//            handler.post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    notifyItemInserted(data.size());
+//                }
+//            });
+//        }
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                notifyItemRemoved(data.size());
+            }
+        });
     }
 
     private void showLoadingView() {
@@ -165,8 +210,10 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
     }
 
     private void removeLoadingViewHolder() {
-        isLoadingViewAdded = false;
-        removeEmptyData();
+        if(isLoadingViewAdded) {
+            isLoadingViewAdded = false;
+            removeEmptyData();
+        }
     }
 
     // #######################################
@@ -189,11 +236,25 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
      */
     public void onLoadMoreFailed(int errorType) {
         removeLoadingViewHolder();
-        showLoadMoreErrorView(errorType);
+        if(shouldShowErrorView) {
+            showLoadMoreErrorView(errorType);
+        }
     }
 
     public boolean isFirstPage() {
         return currentPageNo == 1;
+    }
+
+    public void setPaginationLoadingLayout(int id) {
+        this.paginationLoadingLayoutId = id;
+    }
+
+    public void setLoadMoreLoadingViewVisibility(boolean isVisible) {
+        this.shouldShowLoadingView = isVisible;
+    }
+
+    public void setLoadMoreErrorViewVisibility(boolean isVisible) {
+        this.shouldShowErrorView = isVisible;
     }
 
     /**
@@ -234,6 +295,15 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
      */
     public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
         this.onItemClickListener = onItemClickListener;
+    }
+
+    /**
+     * Sets item long click listener
+     *
+     * @param onItemLongClickListener
+     */
+    public void setOnItemLongClickListener(OnItemLongClickListener onItemLongClickListener) {
+        this.onItemLongClickListener = onItemLongClickListener;
     }
 
     // #######################################
@@ -297,6 +367,17 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
 
     public boolean isEmpty() {
         return getItemCount() == 0;
+    }
+
+    public void setFirstPageNo(int pageNo) {
+        firstPageNo = pageNo;
+    }
+
+    public void resetAdapter(){
+        if(!isEmpty()){
+            clear();
+        }
+        currentPageNo = firstPageNo;
     }
 
     // #######################################
