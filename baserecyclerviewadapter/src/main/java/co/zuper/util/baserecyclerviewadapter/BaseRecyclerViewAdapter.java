@@ -125,7 +125,8 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
     }
 
     private boolean hasLoadingViewAdded(){
-        return loadMoreStatus != LOAD_MORE_STATUS_SUCCESS;
+//        return loadMoreStatus != LOAD_MORE_STATUS_SUCCESS;
+        return isLoadingViewAdded;
     }
 
     private int getPageNoForPosition(int position) {
@@ -356,7 +357,7 @@ public abstract class BaseRecyclerViewAdapter<D> extends RecyclerView.Adapter<Re
     }
 
     public void clear() {
-        while (getItemCount() > 0) {
+        while (getItemCount() > 0 && data.size() > 0) {
             remove(getItem(0));
         }
     }
